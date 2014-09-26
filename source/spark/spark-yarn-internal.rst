@@ -3,13 +3,15 @@
 提交命令
 -----------------
 * 具体提交的Yarn集群通过YARN_CONF_DIR中的配置文件获取；
-:: 
-./bin/spark-submit
-    --class path.to.your.Class
-    --master yarn-cluster | yarn -client
-    [options]
-    <app jar>
-    [app options]
+
+::
+
+    ./bin/spark-submit
+        --class path.to.your.Class
+        --master yarn-cluster | yarn -client
+        [options]
+        <app jar>
+        [app options]
 
 * 运行模式
     - yarn-cluster：driver被封装在AppMaster被yarn调度运行在yarn集群中；
@@ -19,10 +21,11 @@
 Yarn-Cluster
 ===========
 * Yarn-Cluster模式部署主要包括三个核心组件：Client，AppMaster，AppSlave；Client负责提交作业(实际上请求执行的是AppMaster)，AppMaster负责为所有Task申请资源并调度Task执行，AppSlave负责Task的执行及状态汇报等；
+    
 
 Client
 -----------
-* SparkSubmit :: launch中通过org.apache.spark.deploy.yarn.Client提交任务；Client继承YarnClientImpl，主要用来提交Yarn作业，其中主要步骤包括，创建应用，设置应用的参数，提及应用；
+* SparkSubmit :: launch中通过org.apache.spark.deploy.yarn.Client提交yarn app；Client继承YarnClientImpl，主要用来提交Yarn作业，其中主要步骤包括，创建应用，设置应用的参数，提及应用；
 
 * 创建应用
     - YarnClientImpl :: createApplication
@@ -42,23 +45,27 @@ Client
 ApplicationMaster
 -----------------------
 * 应用提交到Yarn后，yarn会调度并执行ApplicationMaster，ApplicationMaster有两个职责：执行用户的Driver程序和请求ResourceManager申请资源；
-
-资源申请
-~~~~~~~~~~
-* 主要流程：
-    - 创建到RM的client，AMRMClient :: createAMRMClient
-    - 在一个线程中启动Driver
-    - 向RM注册AppMaster，主要是告知RM该AppMaster的TrackingURL，方便在RM的UI中给AppMaster提供链接（TODO）
-    - 创建资源分配器YarnAllocationHandler，它负责给Exeutor分配资源，通过YarnAllocationHandler为Executor分配资源
-    - 等待Driver执行结束
+主要流程
+~~~~~~~~~
+    * 创建到RM的client，AMRMClient :: createAMRMClient
+    * 在一个线程中启动Driver
+    * 向RM注册AppMaster，主要是告知RM该AppMaster的TrackingURL，方便在RM的UI中给AppMaster提供链接（TODO）
+    * 创建资源分配器YarnAllocationHandler，它负责给Exeutor分配资源，通过YarnAllocationHandler为Executor分配资源
+    * 等待Driver执行结束
     
     AppMaster中如何拿到Driver中的SparkContext实例？（TODO）
 
+资源申请
+~~~~~~~~~~
 * 资源申请
     - AMRMClient :: addContainerRequest(ContainerRequest)  发送申请
     - 资源申请分三个级别，HOST（要求在某个机器上启动contianer），RACK（要求在某个rack上启动），ANY（不做限制）；    资源请求通过ContainerRequest(resource, hosts, racks, prioritySetting)描述；   
     - 申请资源时可以指定启动多少个Executor，除了本地性的请求外，还会申请num_executor个ANY类型的资源请求（没有本地性需求的情况）
-    - 对于有本地性要求的资源申请，除了在相应Host上申请外，还要在对应的Rack上申请相同的数量（host上不一定有充足的资源供使用）；
+    - 对于有本地性要求的资源申请，除了在相应Host上申请外，还要在对应的Rack上申请相同的数量（host上不一定有充足的资源供使用）；数据本地性相关信息（host->set<Split>）从SparContext.preferredNodeLocationData获取，目前需要自己计算并传入SparkContxt，而不是从RDD中获取，很奇怪（TODO）
+    
+    :: 
+    
+      val sc = new SparkContext(sparkConf,  InputFormatInfo.computePreferredLocations( Seq\(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath)) ))
 
 * 资源获取    
      - AMRMClient  :: allocate  获取分配得到的container 
@@ -67,7 +74,7 @@ ApplicationMaster
 * 启动Contianer
     - 通过ExecutorRunnable :: run 启动得到的资源（Container）
     - 初始化ContainerLaunchContext, 主要构建Container执行命令：java  org.apache.spark.executor.CoarseGrainedExecutorBackend  +　参数, Container内存通过jvm Xms和Xmx限制
-     - 启动Container，NMClient :: startContainer
+    - 启动Container，NMClient :: startContainer
 
 运行Driver
 ~~~~~~~~~
@@ -96,9 +103,26 @@ ApplicationSlave
 执行任务：
 ~~~~~~~~~~
     Executor :: launchTask
-            -> ThreadPool.execute(new TaskRunner)  //多线程模型
+        -> ThreadPool.execute(new TaskRunner)  //多线程模型
     一个Executor是否重复使用，怎么重复使用？（TODO）
 
 
 Yarn-Client
 ===========
+* 该模式下通过SparkSubmit直接在客户端执行用户程序（Driver），而需要的执行资源通过一个独立的yarn app来申请；
+* YarnClientSchedulerBackend启动后会创建Yarn Application并提交给RM；这个Application主要是为job申请资源（AppMaster为ExecutorLauncher，ApplicationSlave为CoarseGrainedExecutorBackend），App也是通过org.apache.spark.deploy.yarn.Client来提交（参数不一样）
+
+
+AppMaster
+----------------
+* Yarn-Client模式下AppMaster实际上是ExecutorLauncher，它不会执行Driver程序，只用来为Driver申请资源；
+* ExecutorLauncher资源申请流程和Yarn-Cluster模式类似，也是包括资源申请，资源获取，启动资源三个主要步骤；由于Driver在客户端运行，ExecutorLauncher在申请资源之前要等待Driver启动起来（以便Container启动后可以注册到SchedulerBackend）；
+
+AppSlave
+-------------
+* 执行的实际上是CoarseGrainedExecutorBackend，与Yarn-Cluster模式类似；
+
+TODO
+----------
+* 为什么需要这两种不同的模式
+
