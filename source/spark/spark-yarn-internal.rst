@@ -62,6 +62,8 @@ ApplicationMaster
     - 资源申请分三个级别，HOST（要求在某个机器上启动contianer），RACK（要求在某个rack上启动），ANY（不做限制）；    资源请求通过ContainerRequest(resource, hosts, racks, prioritySetting)描述；   
     - 申请资源时可以指定启动多少个Executor，除了本地性的请求外，还会申请num_executor个ANY类型的资源请求（没有本地性需求的情况）
     - 对于有本地性要求的资源申请，除了在相应Host上申请外，还要在对应的Rack上申请相同的数量（host上不一定有充足的资源供使用）；数据本地性相关信息（host->set<Split>）从SparContext.preferredNodeLocationData获取，目前需要自己计算并传入SparkContxt，而不是从RDD中获取，很奇怪（TODO）
+    
+    :: 
       val sc = new SparkContext(sparkConf,  InputFormatInfo.computePreferredLocations( Seq\(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath)) ))
 
 * 资源获取    
@@ -71,7 +73,7 @@ ApplicationMaster
 * 启动Contianer
     - 通过ExecutorRunnable :: run 启动得到的资源（Container）
     - 初始化ContainerLaunchContext, 主要构建Container执行命令：java  org.apache.spark.executor.CoarseGrainedExecutorBackend  +　参数, Container内存通过jvm Xms和Xmx限制
-     - 启动Container，NMClient :: startContainer
+    - 启动Container，NMClient :: startContainer
 
 运行Driver
 ~~~~~~~~~
@@ -100,7 +102,7 @@ ApplicationSlave
 执行任务：
 ~~~~~~~~~~
     Executor :: launchTask
-            -> ThreadPool.execute(new TaskRunner)  //多线程模型
+        -> ThreadPool.execute(new TaskRunner)  //多线程模型
     一个Executor是否重复使用，怎么重复使用？（TODO）
 
 
