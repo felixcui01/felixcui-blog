@@ -13,6 +13,7 @@ Contents:
 
    helloworld
    en/quickstart
+   spark/spark-yarn-internal
 
 
 Indices and tables
