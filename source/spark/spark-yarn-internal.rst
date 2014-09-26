@@ -13,6 +13,7 @@ Spark Yarn Internal
 提交命令
 -----------------
 * 具体提交的Yarn集群通过YARN_CONF_DIR中的配置文件获取；
+
 ::
 
 ./bin/spark-submit
