@@ -16,12 +16,12 @@ Spark Yarn Internal
 
 ::
 
-./bin/spark-submit
-    --class path.to.your.Class
-    --master yarn-cluster | yarn -client
-    [options]
-    <app jar>
-    [app options]
+    ./bin/spark-submit
+        --class path.to.your.Class
+        --master yarn-cluster | yarn -client
+        [options]
+        <app jar>
+        [app options]
 
 * 运行模式
     - yarn-cluster：driver被封装在AppMaster被yarn调度运行在yarn集群中；这个模式主要用于生产环境中；
@@ -77,7 +77,7 @@ ApplicationMaster
     - 数据本地性相关信息（host->set<Split>）从SparContext.preferredNodeLocationData获取，目前需要自己计算并传入SparkContxt，而不是从RDD中获取，很奇怪（TODO）
     ::
   
-    val sc = new SparkContext(sparkConf,  InputFormatInfo.computePreferredLocations( Seq\(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath)) ))
+        val sc = new SparkContext(sparkConf,  InputFormatInfo.computePreferredLocations( Seq\(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath)) ))
 
 * 资源获取    
      - AMRMClient  :: allocate  获取分配得到的container 
