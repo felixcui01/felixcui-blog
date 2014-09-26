@@ -64,6 +64,7 @@ ApplicationMaster
     - 对于有本地性要求的资源申请，除了在相应Host上申请外，还要在对应的Rack上申请相同的数量（host上不一定有充足的资源供使用）；数据本地性相关信息（host->set<Split>）从SparContext.preferredNodeLocationData获取，目前需要自己计算并传入SparkContxt，而不是从RDD中获取，很奇怪（TODO）
     
     :: 
+    
       val sc = new SparkContext(sparkConf,  InputFormatInfo.computePreferredLocations( Seq\(new InputFormatInfo(conf, classOf[org.apache.hadoop.mapred.TextInputFormat], inputPath)) ))
 
 * 资源获取    
