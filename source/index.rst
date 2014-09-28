@@ -11,7 +11,6 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
-   helloworld
    en/quickstart
    spark/spark-yarn-internal
 
